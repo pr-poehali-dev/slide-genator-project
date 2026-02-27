@@ -1,12 +1,12 @@
 import { Slide, PresentationStyle } from "@/types";
 
 const STYLE_PROMPTS: Record<PresentationStyle, string> = {
-  corporate: "professional corporate business style, formal tone, structured content",
-  creative: "creative colorful energetic style, engaging storytelling, dynamic content",
-  minimal: "minimalist clean style, concise bullet points, whitespace focused",
-  dark: "sleek dark modern tech style, bold statements, impactful data",
-  gradient: "vibrant gradient modern style, trendy design language, bold typography",
-  nature: "natural organic style, eco-friendly tone, calm and balanced content",
+  corporate: "деловой корпоративный стиль, официальный тон",
+  creative: "творческий яркий стиль, вовлекающий нарратив",
+  minimal: "минималистичный стиль, краткие тезисы",
+  dark: "современный тёмный тех-стиль, броские заявления",
+  gradient: "яркий градиентный современный стиль",
+  nature: "природный органичный стиль, спокойный тон",
 };
 
 const SLIDE_EMOJIS = ["📌", "💡", "🎯", "📊", "🚀", "✅", "🔑", "📈", "💼", "🌟", "🔥", "⚡", "🎨", "🛠️", "📣"];
@@ -23,17 +23,18 @@ function parseSlides(text: string, count: number): Slide[] {
   let contentLines: string[] = [];
 
   for (const line of lines) {
-    const titleMatch = line.match(/^#+\s+(.+)$/) ||
-      line.match(/^\*\*(.+)\*\*$/) ||
-      line.match(/^SLIDE\s*\d*[:\-\s]+(.+)$/i) ||
-      line.match(/^\d+\.\s+(.+)$/);
+    const titleMatch =
+      line.match(/^#{1,3}\s+(.+)$/) ||
+      line.match(/^\*\*(.+)\*\*\s*$/) ||
+      line.match(/^СЛАЙД\s*\d*[:\-\s]+(.+)$/i) ||
+      line.match(/^Слайд\s*\d+[:\-\s]+(.+)$/i);
 
     if (titleMatch && titleMatch[1]) {
       if (currentSlide && currentSlide.title) {
         slides.push({
           id: crypto.randomUUID(),
           title: currentSlide.title,
-          content: contentLines.join("\n").trim() || "Контент слайда",
+          content: contentLines.join("\n").trim() || "• Ключевой тезис слайда",
           emoji: getRandomEmoji(),
           layout: slides.length === 0 ? "title" : "content",
         });
@@ -42,7 +43,11 @@ function parseSlides(text: string, count: number): Slide[] {
       currentSlide = { title: titleMatch[1].replace(/\*\*/g, "").trim() };
     } else if (currentSlide) {
       if (line.trim() && !line.match(/^---+$/)) {
-        contentLines.push(line.trim().replace(/^\*\s+/, "• ").replace(/^-\s+/, "• "));
+        const clean = line.trim()
+          .replace(/^\*\s+/, "• ")
+          .replace(/^-\s+/, "• ")
+          .replace(/^\d+\.\s+/, "• ");
+        contentLines.push(clean);
       }
     }
   }
@@ -51,16 +56,13 @@ function parseSlides(text: string, count: number): Slide[] {
     slides.push({
       id: crypto.randomUUID(),
       title: currentSlide.title,
-      content: contentLines.join("\n").trim() || "Контент слайда",
+      content: contentLines.join("\n").trim() || "• Ключевой тезис слайда",
       emoji: getRandomEmoji(),
       layout: slides.length === 0 ? "title" : "content",
     });
   }
 
-  if (slides.length === 0) {
-    return generateFallbackSlides(count);
-  }
-
+  if (slides.length === 0) return generateFallbackSlides(count);
   return slides.slice(0, count);
 }
 
@@ -72,7 +74,7 @@ function generateFallbackSlides(count: number): Slide[] {
     title: titles[i % titles.length],
     content: "• Ключевой тезис слайда\n• Дополнительная информация\n• Вывод или призыв к действию",
     emoji: getRandomEmoji(),
-    layout: i === 0 ? "title" : "content",
+    layout: (i === 0 ? "title" : "content") as "title" | "content",
   }));
 }
 
@@ -82,33 +84,47 @@ export async function generatePresentation(
   style: PresentationStyle
 ): Promise<Slide[]> {
   const styleHint = STYLE_PROMPTS[style];
-  const prompt = `Create a ${slideCount}-slide presentation about "${topic}". Style: ${styleHint}.
 
-Format EXACTLY like this (use ## for slide titles):
-## Slide title here
-Content bullet 1
-Content bullet 2
-Content bullet 3
+  const prompt = `Создай презентацию на тему "${topic}" в стиле: ${styleHint}.
+Ровно ${slideCount} слайдов на русском языке.
+Формат строго такой (## перед каждым заголовком):
 
-## Next slide title
-Content here
+## Заголовок первого слайда
+• Пункт 1
+• Пункт 2
+• Пункт 3
 
-Generate exactly ${slideCount} slides. Write in Russian language. Each slide: 1 clear title + 3-5 content points.`;
+## Заголовок второго слайда
+• Пункт 1
+• Пункт 2
+• Пункт 3
 
-  const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Date.now()}`;
+Каждый слайд: 1 заголовок + 3-5 пунктов. Никаких лишних слов кроме слайдов.`;
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("API error");
+    // POST — чтобы не упираться в лимит длины URL
+    const res = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: prompt }],
+        model: "openai",
+        seed: Date.now(),
+        private: true,
+      }),
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
+
     const parsed = parseSlides(text, slideCount);
     if (parsed.length < slideCount) {
       const extra = generateFallbackSlides(slideCount - parsed.length);
       return [...parsed, ...extra];
     }
     return parsed;
-  } catch {
+  } catch (e) {
+    console.error("AI generation failed:", e);
     return generateFallbackSlides(slideCount);
   }
 }

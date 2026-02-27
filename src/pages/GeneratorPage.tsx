@@ -5,6 +5,7 @@ import { generatePresentation } from "@/lib/aiGenerator";
 import { exportToPptx } from "@/lib/exportPptx";
 import { useToast } from "@/hooks/use-toast";
 import SlideEditor from "@/components/SlideEditor";
+import SlidePreview from "@/components/SlidePreview";
 
 interface GeneratorPageProps {
   onSave: (pres: Presentation) => void;
@@ -31,6 +32,7 @@ export default function GeneratorPage({ onSave }: GeneratorPageProps) {
   const [presentation, setPresentation] = useState<Presentation | null>(null);
   const [progress, setProgress] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -156,6 +158,13 @@ export default function GeneratorPage({ onSave }: GeneratorPageProps) {
             </div>
             <div className="flex gap-3 flex-wrap">
               <button
+                onClick={() => setPreviewIndex(0)}
+                className="glass text-white/80 font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-white/10 transition-all flex items-center gap-2"
+              >
+                <Icon name="Play" size={16} />
+                Предпросмотр
+              </button>
+              <button
                 onClick={handleAddSlide}
                 className="glass text-white/80 font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-white/10 transition-all flex items-center gap-2"
               >
@@ -187,10 +196,20 @@ export default function GeneratorPage({ onSave }: GeneratorPageProps) {
                 onUpdate={(updated) => handleUpdateSlide(slide.id, updated)}
                 onDelete={() => handleDeleteSlide(slide.id)}
                 canDelete={presentation.slides.length > 1}
+                onPreview={() => setPreviewIndex(index)}
               />
             ))}
           </div>
         </div>
+
+        {/* Preview modal */}
+        {previewIndex !== null && (
+          <SlidePreview
+            presentation={presentation}
+            initialIndex={previewIndex}
+            onClose={() => setPreviewIndex(null)}
+          />
+        )}
       </div>
     );
   }

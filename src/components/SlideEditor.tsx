@@ -8,12 +8,13 @@ interface SlideEditorProps {
   style: PresentationStyle;
   onUpdate: (updated: Partial<Slide>) => void;
   onDelete: () => void;
+  onPreview: () => void;
   canDelete: boolean;
 }
 
 const EMOJIS = ["📌", "💡", "🎯", "📊", "🚀", "✅", "🔑", "📈", "💼", "🌟", "🔥", "⚡", "🎨", "🛠️", "📣", "✨", "🏆", "💎", "🌍", "🔮"];
 
-export default function SlideEditor({ slide, index, style, onUpdate, onDelete, canDelete }: SlideEditorProps) {
+export default function SlideEditor({ slide, index, style, onUpdate, onDelete, onPreview, canDelete }: SlideEditorProps) {
   const [editing, setEditing] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [localTitle, setLocalTitle] = useState(slide.title);
@@ -75,6 +76,13 @@ export default function SlideEditor({ slide, index, style, onUpdate, onDelete, c
           </div>
 
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={onPreview}
+              className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
+              title="Предпросмотр"
+            >
+              <Icon name="Expand" size={14} />
+            </button>
             <button
               onClick={() => setEditing(true)}
               className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/70 hover:text-white"
