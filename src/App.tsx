@@ -1,28 +1,30 @@
-
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import HomePage from "@/pages/HomePage";
+import GeneratorPage from "@/pages/GeneratorPage";
+import HistoryPage from "@/pages/HistoryPage";
+import InstructionPage from "@/pages/InstructionPage";
+import NavBar from "@/components/NavBar";
+import { Presentation } from "@/types";
 
-const queryClient = new QueryClient();
+export default function App() {
+  const [page, setPage] = useState<"home" | "generator" | "history" | "instruction">("home");
+  const [history, setHistory] = useState<Presentation[]>([]);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+  const addToHistory = (pres: Presentation) => {
+    setHistory(prev => [pres, ...prev]);
+  };
+
+  return (
+    <div className="min-h-screen font-golos">
+      <NavBar currentPage={page} onNavigate={setPage} />
+      <main>
+        {page === "home" && <HomePage onStart={() => setPage("generator")} />}
+        {page === "generator" && <GeneratorPage onSave={addToHistory} />}
+        {page === "history" && <HistoryPage history={history} />}
+        {page === "instruction" && <InstructionPage />}
+      </main>
       <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
+    </div>
+  );
+}
